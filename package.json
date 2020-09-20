@@ -1,0 +1,16 @@
+{
+  "name": "digitaljs_peek_poke_tester",
+  "version": "1.0.0",
+  "description": "Peek poke tester for digitaljs circuits",
+  "main": "index.js",
+  "author": "Jakub Szczerbiński",
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests.js"
+  },
+  "dependencies": {
+    "digitaljs": "^0.6.6",
+    "jquery": "^3.5.1",
+    "jsdom": "^16.4.0"
+  }
+}
