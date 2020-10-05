@@ -198,4 +198,274 @@ test("Should load circuit and respond to peek, poke, and step", async () => {
   shutdown(sut);
 })
 
+const clocked_circuit = {
+  "devices": {
+      "dev0": {
+          "label": "x",
+          "type": "Input",
+          "propagation": 0,
+          "position": {
+              "x": 0,
+              "y": 0
+          }
+      },
+      "dev1": {
+          "label": "clk",
+          "type": "Input",
+          "propagation": 100,
+          "position": {
+              "x": 0,
+              "y": 95
+          }
+      },
+      "dev2": {
+          "label": "y1",
+          "type": "Output",
+          "propagation": 1,
+          "position": {
+              "x": 309.25,
+              "y": 0
+          }
+      },
+      "dev3": {
+          "label": "y2",
+          "type": "Output",
+          "propagation": 1,
+          "position": {
+              "x": 468.75,
+              "y": 47.5
+          }
+      },
+      "dev4": {
+          "label": "y3",
+          "type": "Output",
+          "propagation": 1,
+          "position": {
+              "x": 618.5,
+              "y": 105
+          }
+      },
+      "dev5": {
+          "label": "$procdff$2",
+          "type": "Dff",
+          "propagation": 1,
+          "polarity": {
+              "clock": true
+          },
+          "bits": 1,
+          "initial": "x",
+          "position": {
+              "x": 140,
+              "y": 5
+          }
+      },
+      "dev6": {
+          "label": "$procdff$3",
+          "type": "Dff",
+          "propagation": 1,
+          "polarity": {
+              "clock": true
+          },
+          "bits": 1,
+          "initial": "x",
+          "position": {
+              "x": 299.5,
+              "y": 52.5
+          }
+      },
+      "dev7": {
+          "label": "$procdff$4",
+          "type": "Dff",
+          "propagation": 1,
+          "polarity": {
+              "clock": true
+          },
+          "bits": 1,
+          "initial": "x",
+          "position": {
+              "x": 459,
+              "y": 100
+          }
+      }
+  },
+  "connectors": [
+      {
+          "from": {
+              "id": "dev0",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev5",
+              "port": "in"
+          },
+          "name": "x"
+      },
+      {
+          "from": {
+              "id": "dev1",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev5",
+              "port": "clk"
+          },
+          "name": "clk"
+      },
+      {
+          "from": {
+              "id": "dev1",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev6",
+              "port": "clk"
+          },
+          "name": "clk"
+      },
+      {
+          "from": {
+              "id": "dev1",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev7",
+              "port": "clk"
+          },
+          "name": "clk"
+      },
+      {
+          "from": {
+              "id": "dev5",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev2",
+              "port": "in"
+          },
+          "name": "y1"
+      },
+      {
+          "from": {
+              "id": "dev5",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev6",
+              "port": "in"
+          },
+          "name": "y1"
+      },
+      {
+          "from": {
+              "id": "dev6",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev3",
+              "port": "in"
+          },
+          "name": "y2"
+      },
+      {
+          "from": {
+              "id": "dev6",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev7",
+              "port": "in"
+          },
+          "name": "y2"
+      },
+      {
+          "from": {
+              "id": "dev7",
+              "port": "out"
+          },
+          "to": {
+              "id": "dev4",
+              "port": "in"
+          },
+          "name": "y3"
+      }
+  ],
+  "subcircuits": {}
+}
+
+test("Should load circuit and detect clock", async () => {
+  const sut = makeSut();
+  
+  const load_request = {
+    type: "load",
+    circuit: clocked_circuit,
+  }
+  const ok_response = { type: "ok" };
+  await expectResponse(sut, load_request, ok_response);
+
+  const poke_1_request = {
+    type: "poke",
+    name: "dev0",
+    value: 1,
+  }
+  await expectResponse(sut, poke_1_request, ok_response);
+  
+  const step_3_request = {
+    type: "step",
+    steps: 3,
+  }
+  await expectResponse(sut, step_3_request, ok_response);
+
+  const peek_y1_request = {
+    type: "peek",
+    name: "dev2",
+  }
+  const peek_y2_request = {
+    type: "peek",
+    name: "dev3",
+  }
+  const peek_y3_request = {
+    type: "peek",
+    name: "dev4",
+  }
+  const value_1_response = {
+    type: "value",
+    value: 1,
+  }
+  const value_0_response = {
+    type: "value",
+    value: 0,
+  }
+  await expectResponse(sut, peek_y1_request, value_1_response);
+  await expectResponse(sut, peek_y2_request, value_1_response);
+  await expectResponse(sut, peek_y3_request, value_1_response);
+
+  const poke_0_request = {
+    type: "poke",
+    name: "dev0",
+    value: 0,
+  }
+  const step_1_request = {
+    type: "step",
+    steps: 1,
+  }
+  await expectResponse(sut, poke_0_request, ok_response)
+
+  await expectResponse(sut, step_1_request, ok_response);
+  await expectResponse(sut, peek_y1_request, value_0_response);
+  await expectResponse(sut, peek_y2_request, value_1_response);
+  await expectResponse(sut, peek_y3_request, value_1_response);
+
+  await expectResponse(sut, step_1_request, ok_response);
+  await expectResponse(sut, peek_y1_request, value_0_response);
+  await expectResponse(sut, peek_y2_request, value_0_response);
+  await expectResponse(sut, peek_y3_request, value_1_response);
+
+  await expectResponse(sut, step_1_request, ok_response);
+  await expectResponse(sut, peek_y1_request, value_0_response);
+  await expectResponse(sut, peek_y2_request, value_0_response);
+  await expectResponse(sut, peek_y3_request, value_0_response);
+
+  shutdown(sut);
+})
+
 runTests().then(process.exit);

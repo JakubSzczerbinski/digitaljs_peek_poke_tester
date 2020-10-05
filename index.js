@@ -1,7 +1,6 @@
 "use strict";
 
 const readline = require('readline');
-const digitaljs = require("./main.js")
 const { PeekPokeTester } = require('./peek_poke_tester.js')
 
 const rl = readline.createInterface({
@@ -112,7 +111,6 @@ const parseMessage = (line) => {
         console.error("Error while parsing message:", error);
         return null;
     }
-    return null;
 }
 
 rl.on('line', function (line) {

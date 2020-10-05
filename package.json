@@ -9,8 +9,6 @@
     "test": "node tests.js"
   },
   "dependencies": {
-    "digitaljs": "^0.6.6",
-    "jquery": "^3.5.1",
-    "jsdom": "^16.4.0"
+    "digitaljs": "JakubSzczerbinski/digitaljs#965cd62f023dfcb89811403ac7c6367f74c5c6b6"
   }
 }
