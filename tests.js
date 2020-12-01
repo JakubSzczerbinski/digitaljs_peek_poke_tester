@@ -2,11 +2,17 @@
 'use strict';
 
 const assert = require('assert').strict;
-const { rejects } = require('assert');
 const { spawn } = require('child_process');
-const { Resolver } = require('dns');
-const { request } = require('http');
-const { resolve } = require('path');
+const { PeekPokeTester } = require('./peek_poke_tester')
+
+const helpers = {
+  msgToJson(data) {
+    return JSON.parse(Buffer.from(data.toString().trim(), 'base64').toString());
+  },
+  jsonToMsg(json) {
+    return Buffer.from(JSON.stringify(json)).toString('base64') + '\n';
+  }
+}
 
 const tests = [];
 
@@ -16,8 +22,8 @@ const colors = {
   fg_green: "\x1b[32m",
 }
 
-const test = (name, proc) => {
-  tests.push({ name, proc });
+const test = (name, tags, proc) => {
+  tests.push({ name, tags, proc });
 }
 
 const sequentially = (promises) =>
@@ -28,12 +34,13 @@ const sequentially = (promises) =>
 
 let test_log = console.error
 
-const runTests = async () => {
-  const results = await sequentially(tests.map(({ name, proc }) => async () => {
+const runTests = async (activeTags) => {
+  const activeTests = activeTags ? tests.filter(test => test.tags.some(tag => activeTags.includes(tag))) : tests
+  const results = await sequentially(activeTests.map(({ name, tags, proc }) => async () => {
     const log = []
     try {
       test_log = (line) => log.push(line)
-      console.log("---   Running test: '" + name + "'.");
+      console.log("---   Running test: '" + name + " " + tags.map(tag => "[" + tag + "]").join("") + "'.");
       await proc();
     } catch (error) {
       log.forEach(line => console.log(line));
@@ -61,14 +68,6 @@ const runTests = async () => {
   return 0;
 }
 
-const helpers = {
-  msgToJson(data) {
-    return JSON.parse(Buffer.from(data.toString().trim(), 'base64').toString());
-  },
-  jsonToMsg(json) {
-    return Buffer.from(JSON.stringify(json)).toString('base64') + '\n';
-  }
-}
 
 const sendMsg = (sut, request) => 
   new Promise((resolve, rejects) => {
@@ -102,40 +101,9 @@ const makeSut = () => {
 const shutdown = async (sut) => 
   await sut.kill("SIGKILL")
 
-const simple_circuit = {
-  "devices": {
-    "dev-1": {
-      "type": "Input",
-      "net": "i",
-      "order": -1,
-      "bits": 1,
-      "label": "i"
-    },
-    "dev0": {
-      "type": "Output",
-      "net": "o",
-      "order": 0,
-      "bits": 1,
-      "label": "o"
-    }
-  },
-  "connectors": [
-    {
-      "to": {
-        "id": "dev0",
-        "port": "in"
-      },
-      "from": {
-        "id": "dev-1",
-        "port": "out"
-      },
-      "name": "i"
-    }
-  ],
-  "subcircuits": {}
-}
+const simple_circuit = require('./circuits/simple')
 
-test("Should load circuit", async () => {
+test("Should load circuit", ["Communication", "Simple"], async () => {
   const sut = makeSut();
 
   const load_request = {
@@ -148,7 +116,7 @@ test("Should load circuit", async () => {
   shutdown(sut);
 })
 
-test("Should load circuit and respond to peek, poke, and step", async () => {
+test("Should load circuit and respond to peek, poke, and step", ["Communication", "Simple"], async () => {
   const sut = makeSut();
 
   const load_request = {
@@ -198,201 +166,9 @@ test("Should load circuit and respond to peek, poke, and step", async () => {
   shutdown(sut);
 })
 
-const clocked_circuit = {
-  "devices": {
-      "dev0": {
-          "label": "x",
-          "type": "Input",
-          "propagation": 0,
-          "position": {
-              "x": 0,
-              "y": 0
-          }
-      },
-      "dev1": {
-          "label": "clk",
-          "type": "Input",
-          "propagation": 100,
-          "position": {
-              "x": 0,
-              "y": 95
-          }
-      },
-      "dev2": {
-          "label": "y1",
-          "type": "Output",
-          "propagation": 1,
-          "position": {
-              "x": 309.25,
-              "y": 0
-          }
-      },
-      "dev3": {
-          "label": "y2",
-          "type": "Output",
-          "propagation": 1,
-          "position": {
-              "x": 468.75,
-              "y": 47.5
-          }
-      },
-      "dev4": {
-          "label": "y3",
-          "type": "Output",
-          "propagation": 1,
-          "position": {
-              "x": 618.5,
-              "y": 105
-          }
-      },
-      "dev5": {
-          "label": "$procdff$2",
-          "type": "Dff",
-          "propagation": 1,
-          "polarity": {
-              "clock": true
-          },
-          "bits": 1,
-          "initial": "x",
-          "position": {
-              "x": 140,
-              "y": 5
-          }
-      },
-      "dev6": {
-          "label": "$procdff$3",
-          "type": "Dff",
-          "propagation": 1,
-          "polarity": {
-              "clock": true
-          },
-          "bits": 1,
-          "initial": "x",
-          "position": {
-              "x": 299.5,
-              "y": 52.5
-          }
-      },
-      "dev7": {
-          "label": "$procdff$4",
-          "type": "Dff",
-          "propagation": 1,
-          "polarity": {
-              "clock": true
-          },
-          "bits": 1,
-          "initial": "x",
-          "position": {
-              "x": 459,
-              "y": 100
-          }
-      }
-  },
-  "connectors": [
-      {
-          "from": {
-              "id": "dev0",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev5",
-              "port": "in"
-          },
-          "name": "x"
-      },
-      {
-          "from": {
-              "id": "dev1",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev5",
-              "port": "clk"
-          },
-          "name": "clk"
-      },
-      {
-          "from": {
-              "id": "dev1",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev6",
-              "port": "clk"
-          },
-          "name": "clk"
-      },
-      {
-          "from": {
-              "id": "dev1",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev7",
-              "port": "clk"
-          },
-          "name": "clk"
-      },
-      {
-          "from": {
-              "id": "dev5",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev2",
-              "port": "in"
-          },
-          "name": "y1"
-      },
-      {
-          "from": {
-              "id": "dev5",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev6",
-              "port": "in"
-          },
-          "name": "y1"
-      },
-      {
-          "from": {
-              "id": "dev6",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev3",
-              "port": "in"
-          },
-          "name": "y2"
-      },
-      {
-          "from": {
-              "id": "dev6",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev7",
-              "port": "in"
-          },
-          "name": "y2"
-      },
-      {
-          "from": {
-              "id": "dev7",
-              "port": "out"
-          },
-          "to": {
-              "id": "dev4",
-              "port": "in"
-          },
-          "name": "y3"
-      }
-  ],
-  "subcircuits": {}
-}
+const clocked_circuit = require('./circuits/clocked') 
 
-test("Should load circuit and detect clock", async () => {
+test("Should load circuit and detect clock", ["Communication", "Clocked"], async () => {
   const sut = makeSut();
   
   const load_request = {
@@ -466,6 +242,51 @@ test("Should load circuit and detect clock", async () => {
   await expectResponse(sut, peek_y3_request, value_0_response);
 
   shutdown(sut);
+})
+
+const gcd_circuit = require('./circuits/gcd')
+
+test("Peek poke tester works with clocked circuit", ["PeekPokeTester", "Clocked"], () => {
+  const ppt = new PeekPokeTester(clocked_circuit)
+  ppt.poke("dev0", 0);
+  ppt.step(3);
+  assert(ppt.peek("dev2") == 0)
+  assert(ppt.peek("dev3") == 0)
+  assert(ppt.peek("dev4") == 0)
+})
+
+test("Peek poke tester works with gcd circuit", ["PeekPokeTester", "Gcd"], () => {
+  const ppt = new PeekPokeTester(gcd_circuit);
+  ppt.poke("io_a", 24)
+  ppt.poke("io_b", 20)
+  ppt.poke("io_e", 1)
+  ppt.step(2)
+  ppt.poke("io_e", 0)
+  assert(ppt.peek("io_v") == 0)
+})
+
+const andr_orr_xorr = require('./circuits/andr_orr_xorr');
+
+test("Peek poke tester works with andr_orr_xorr circuit", ["PeekPokeTester", "AndrOrrXorr"], () => {
+  const ppt = new PeekPokeTester(andr_orr_xorr);
+  ppt.poke("io_in1_0", 0);
+  ppt.poke("io_in1_1", 0);
+  ppt.poke("io_in1_2", 1);
+  ppt.poke("io_in1_3", 0);
+  assert(ppt.peek("io_out_andr") == 0);
+  assert(ppt.peek("io_out_orr")  == 1);
+  assert(ppt.peek("io_out_xorr") == 1);
+})
+
+const simple_2 = require('./circuits/simple_2');
+
+test("Peek poke tester load simple_2", ["PeekPokeTester", "Simple2"], () => {
+  const ppt = new PeekPokeTester(simple_2)
+})
+
+const carry_or_chain3 = require('./circuits/carry_or_chain3');
+test("Peek poke tester load carry_or_chain_3", ["PeekPokeTester", "CarryOrChain3"], () => {
+  const ppt = new PeekPokeTester(carry_or_chain3)
 })
 
 runTests().then(process.exit);

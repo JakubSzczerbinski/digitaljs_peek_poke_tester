@@ -29,14 +29,22 @@ class PeekPokeTester {
       console.error("WARN: Found more than one clock. Selecting first found.");
 
     this.clock = clks[0];
+    this.step_one();
   }
 
   peek(name) {
-    if (!this.outputs[name])
+    if (!this.outputs[name]){
+      console.error(this.outputs);
       return null;
+    }
     const value = this.circuit.getOutput(name)
-    console.error(value);
-    return value.toNumber(false);
+    let result = null;
+    try {
+      result = value.toHex();
+    } catch (err) {
+      console.error("Failed to convert", value, "to number:", err)
+    }
+    return result;
   }
   
   poke(name, value) {
@@ -44,6 +52,7 @@ class PeekPokeTester {
     if (!input)
       return false;
     this.circuit.setInput(name, Vector3vl.fromNumber(value, input.bits))
+    this.updateUntilStable();
     return true;
   }
 
@@ -56,19 +65,14 @@ class PeekPokeTester {
   step_one() {
     if (this.clock) {
       this.poke(this.clock, 0);
-      this.updateUntilStable();
       this.poke(this.clock, 1);
-      this.updateUntilStable();
-    }
-    else {
-      this.updateUntilStable();
     }
   }
 
   updateUntilStable() {
-    while (this.circuit.hasPendingEvents) {
+    do {
       this.circuit._updateGates();
-    }
+    } while (this.circuit.hasPendingEvents);
   }
 }
 

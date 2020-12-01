@@ -2,6 +2,8 @@
 
 const readline = require('readline');
 const { PeekPokeTester } = require('./peek_poke_tester.js')
+const { isDigitaljs } = require('digitaljs_schema')
+const { checkConnections } = require('digitaljs_schema/build/connection_validator')
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -10,11 +12,17 @@ const rl = readline.createInterface({
 })
 
 const onLoad = (msg) => {
+    if (!isDigitaljs(msg.circuit) || !checkConnections(msg.circuit, true)) {
+        respond_NOK(CIRCUIT_IS_NOT_DIGITALJS);
+        return;
+    }
+
     const tester = makeTester(msg.circuit)
     if (!tester) {
         respond_NOK(LOAD_FAILED);
         return;
     }
+
     onMsg = circuitLoaded(tester)
     respond_OK()
 }
@@ -69,7 +77,7 @@ let onMsg = initial
 
 const sendMsg = (msg) => {
     const encoded = (Buffer.from(JSON.stringify(msg))).toString('base64')
-    console.log(encoded + "\n")
+    console.log(encoded)
 }
 
 const respond_OK = () => {
@@ -82,6 +90,7 @@ const NO_TEST_CIRCUIT = 1
 const NOT_IMPLEMENTED = 2
 const INVALID_OUTPUT_NAME = 3
 const INVALID_INPUT_NAME = 4
+const CIRCUIT_IS_NOT_DIGITALJS = 5
 
 const respond_NOK = (err) => {
     sendMsg({ type: "nok", error_code: err })

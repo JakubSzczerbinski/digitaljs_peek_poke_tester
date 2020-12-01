@@ -9,6 +9,7 @@
     "test": "node tests.js"
   },
   "dependencies": {
-    "digitaljs": "JakubSzczerbinski/digitaljs#965cd62f023dfcb89811403ac7c6367f74c5c6b6"
+    "digitaljs": "github:JakubSzczerbinski/digitaljs#965cd62f023dfcb89811403ac7c6367f74c5c6b6",
+    "digitaljs_schema": "^1.0.0-alpha-4"
   }
 }
