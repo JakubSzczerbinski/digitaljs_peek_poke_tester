@@ -145,7 +145,7 @@ test("Should load circuit and respond to peek, poke, and step", ["Communication"
   }
   const value_1_response = {
     type: "value",
-    value: 1,
+    value: '1',
   }
   await expectResponse(sut, peek_request, value_1_response)
 
@@ -159,7 +159,7 @@ test("Should load circuit and respond to peek, poke, and step", ["Communication"
   
   const value_0_response = {
     type: "value",
-    value: 0,
+    value: '0',
   }
   await expectResponse(sut, peek_request, value_0_response);
 
@@ -205,11 +205,11 @@ test("Should load circuit and detect clock", ["Communication", "Clocked"], async
   }
   const value_1_response = {
     type: "value",
-    value: 1,
+    value: '1',
   }
   const value_0_response = {
     type: "value",
-    value: 0,
+    value: '0',
   }
   await expectResponse(sut, peek_y1_request, value_1_response);
   await expectResponse(sut, peek_y2_request, value_1_response);
