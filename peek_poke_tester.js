@@ -19,7 +19,7 @@ class PeekPokeTester {
         clks = [name, ...clks]
 
       if (celldata.type == 'Output')
-        this.outputs[name] = {net: celldata.net, bits: celldata.bits};
+        this.outputs[name] = celldata;
     }
 
     if (clks.length == 0)
