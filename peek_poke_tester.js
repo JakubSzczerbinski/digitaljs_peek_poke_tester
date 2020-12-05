@@ -33,18 +33,22 @@ class PeekPokeTester {
   }
 
   peek(name) {
-    if (!this.outputs[name]){
+    const output = this.outputs[name];
+    if (!output){
       console.error(this.outputs);
       return null;
     }
     const value = this.circuit.getOutput(name)
     let result = null;
     try {
-      result = value.toHex();
+      if (output.signed === true)
+        result = value.toBigIntSigned();
+      else
+        result = value.toBigInt();
     } catch (err) {
       console.error("Failed to convert", value, "to number:", err)
     }
-    return result;
+    return result.toString();
   }
   
   poke(name, value) {
